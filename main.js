@@ -40,7 +40,7 @@ class Block {
 class Blockchain {
     constructor() {
         this.chain = [this.createGenesisBlock()]
-        this.difficulty = 5;
+        this.difficulty = 2;
     }
 
     // The first block on the blockchain is called the genesis block
@@ -94,22 +94,45 @@ class Blockchain {
     }
 }
 
-let bitCoin = new Blockchain();
+// Notice how long the mining takes as the difficulty increases
+function miningExample() {
+    console.log('miningExample');
 
-console.log('Mining block 1...');
-bitCoin.addBlock(new Block(1, "10/07/2017", { amount: 4 }));
-console.log('Mining block 2...');
-bitCoin.addBlock(new Block(2, "12/07/2017", { amount: 10 }));
+    let bitCoin = new Blockchain();
 
-console.log('Is blockchain valid? ' + bitCoin.isChainValid());
-// console.log(JSON.stringify(bitCoin, null, 4));
+    console.log('Mining block 1...');
+    bitCoin.addBlock(new Block(1, "10/07/2017", { amount: 4 }));
+    console.log('Mining block 2...');
+    bitCoin.addBlock(new Block(2, "12/07/2017", { amount: 10 }));
 
-bitCoin.chain[1].data = { amount: 100 }
-bitCoin.chain[1].hash = bitCoin.chain[1].calculateHash();
-// Not valid because the relationship with its neighboring blocks have been broken
-console.log('Is blockchain valid? ' + bitCoin.isChainValid());
+    console.log();
+}
 
 // The blockchain is meant to add blocks to it but to never delete a block and to never change a block
+function isChainValidExample() {
+    console.log('isChainValidExample');
+
+    let bitCoin = new Blockchain();
+    bitCoin.addBlock(new Block(1, "10/07/2017", { amount: 4 }));
+    bitCoin.addBlock(new Block(2, "12/07/2017", { amount: 10 }));
+
+    console.log('Is blockchain valid? ' + bitCoin.isChainValid());
+    // console.log(JSON.stringify(bitCoin, null, 4));
+
+    bitCoin.chain[1].data = { amount: 100 }
+    bitCoin.chain[1].hash = bitCoin.chain[1].calculateHash();
+    // Not valid because the relationship with its neighboring blocks have been broken
+    console.log('Is blockchain valid? ' + bitCoin.isChainValid());
+    
+    console.log();
+}
+
+function main() {
+    miningExample();
+    isChainValidExample();
+}
+
+main();
 
 
 
