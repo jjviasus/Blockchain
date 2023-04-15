@@ -1,17 +1,22 @@
 const SHA256 = require('crypto-js/sha256');
 
+class Transaction {
+    constructor(fromAddress, toAddress, amount) {
+        this.fromAddress = fromAddress;
+        this.toAddress = toAddress;
+        this.amount = amount;
+    }
+}
+
 class Block {
     /**
-     * 
-     * @param {*} index (Optional) tells us where the block sits on the chain
      * @param {*} timestamp Tells us when the block was created
-     * @param {*} data The data associated with the block
+     * @param {*} transactions The data associated with the block
      * @param {*} previousHash String that contains the hash of the block before this one (Ensures integrity of the blockchain)
      */
-    constructor(index, timestamp, data, previousHash = '') {
-        this.index = index;
+    constructor(timestamp, transactions, previousHash = '') {
         this.timestamp = timestamp;
-        this.data = data;
+        this.transactions = transactions;
         this.previousHash = previousHash;
         this.hash = this.calculateHash(); // Contains the hash of the block
         this.nonce = 0; // A random number
@@ -21,7 +26,7 @@ class Block {
      * Calculates the hash of the block. Returns a SHA256 hash of the block's properties
      */
     calculateHash() {
-        return SHA256(this.index + this.previousHash + this.timestamp + JSON.stringify(this.data) + this.nonce).toString();
+        return SHA256(this.index + this.previousHash + this.timestamp + JSON.stringify(this.transactions) + this.nonce).toString();
     }
 
     mineBlock(difficulty) {
@@ -41,12 +46,14 @@ class Blockchain {
     constructor() {
         this.chain = [this.createGenesisBlock()]
         this.difficulty = 2;
+        this.pendingTransactions = [];
+        this.miningReward = 100; // controls how many coins are given to miners when they mine a new block
     }
 
     // The first block on the blockchain is called the genesis block
     createGenesisBlock() {
         // previous hash does not matter for the genesis block
-        return new Block(0, "01/01/2017", "Genesis block", "0");
+        return new Block("01/01/2017", "Genesis block", "0");
     }
 
     /**
@@ -56,20 +63,46 @@ class Blockchain {
         return this.chain[this.chain.length - 1];
     }
 
-    /**
-     * Adds a new block to the chain
-     */
-    addBlock(newBlock) {
-        // Set the previous hash to the hash of the latest block
-        newBlock.previousHash = this.getLatestBlock().hash;
-        
-        // Recalculate the hash of the new block
-        newBlock.mineBlock(this.difficulty); // Any time we change a property of a block, the hash should change as well.
+    // In reality, miners get to pick the transactions they want to include in the block,
+    // but for simplicity we will just add all pending transactions
+    minePendingTransactions(miningRewardAddress) {
+        // If a miner successfully mines a block, then a reward is sent to the given address
+        let block = new Block(Date.now(), this.pendingTransactions);
+        block.mineBlock(this.difficulty);
 
-        // Add the new block to the chain
-        this.chain.push(newBlock);
+        console.log('Block successfully mined!');
+        this.chain.push(block);
+
+        // Reset the pending transaction array and create a new transaction to give the miner they're reward
+        this.pendingTransactions = [new Transaction(null, miningRewardAddress, this.miningReward)]; // Theres no from address because it is a reward (coming directly out of the system)
     }
 
+    createTransaction(transaction) {
+        this.pendingTransactions.push(transaction);
+    }
+    
+    /**
+     * Loops over all the blocks in the chain and returns all the transactions that match the given address
+     * @param {*} address 
+     */
+    getBalanceOfAddress(address) {
+        let balance = 0;
+        for (const block of this.chain) {
+            for(const trans of block.transactions) {
+                // If you were a fromAddress, then you sent money to someone else
+                if (trans.fromAddress === address) {
+                    balance -= trans.amount;
+                }
+
+                // If you were a toAddress, then you received money from someone else
+                if (trans.toAddress === address) {
+                    balance += trans.amount;
+                }
+            }
+        }
+
+        return balance;
+    }
     /**
      * 
      */
@@ -119,17 +152,35 @@ function isChainValidExample() {
     console.log('Is blockchain valid? ' + bitCoin.isChainValid());
     // console.log(JSON.stringify(bitCoin, null, 4));
 
-    bitCoin.chain[1].data = { amount: 100 }
+    bitCoin.chain[1].transactions = { amount: 100 }
     bitCoin.chain[1].hash = bitCoin.chain[1].calculateHash();
     // Not valid because the relationship with its neighboring blocks have been broken
     console.log('Is blockchain valid? ' + bitCoin.isChainValid());
-    
+
     console.log();
 }
 
+function transactionExample() {
+    let bitCoin = new Blockchain();
+    bitCoin.createTransaction(new Transaction('address1', 'address2', 100));
+    bitCoin.createTransaction(new Transaction('address2', 'address1', 50));
+
+    console.log('\nStarting the miner...');
+    bitCoin.minePendingTransactions('miners-address');
+
+    console.log('\nBalance of miners address is:', bitCoin.getBalanceOfAddress('miners-address'));
+
+    // The mining reward is only sent when the next block is mined
+    console.log('\nStarting the miner again...');
+    bitCoin.minePendingTransactions('another-miners-address');
+
+    console.log('\nBalance of miners address is:', bitCoin.getBalanceOfAddress('miners-address'));
+}
+
 function main() {
-    miningExample();
-    isChainValidExample();
+    // miningExample();
+    // isChainValidExample();
+    transactionExample();
 }
 
 main();
